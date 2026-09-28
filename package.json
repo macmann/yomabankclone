@@ -1,0 +1,5 @@
+{
+  "scripts": {"dev": "python3 -m http.server 4173", "build": "mkdir -p dist && tsc src.jsx --jsx react --allowJs --target ES2020 --module none --outFile dist/app.js --ignoreDeprecations 6.0"},
+  "dependencies": {},
+  "devDependencies": {}
+}
