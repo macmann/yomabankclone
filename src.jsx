@@ -8,6 +8,29 @@ const Menu=makeIcon('Menu'),Search=makeIcon('Search'),ChevronDown=makeIcon('Chev
 
 const img = (id, w=900) => `https://images.unsplash.com/${id}?auto=format&fit=crop&w=${w}&q=82`;
 
+const DEFAULT_WIDGET={src:'https://ai-staging.apitoolz.com/kb-chat.js',bot:'cdea6f9a-d522-4f07-b54b-31706028e69f'};
+const WIDGET_STORAGE_KEY='yoma-bank-chat-widget';
+function widgetTag(config){return `<script src="${config.src}" data-bot="${config.bot}" defer><\/script>`}
+function getWidgetConfig(){try{return {...DEFAULT_WIDGET,...JSON.parse(localStorage.getItem(WIDGET_STORAGE_KEY)||'{}')}}catch{return DEFAULT_WIDGET}}
+function loadChatWidget(){
+  if(location.pathname.replace(/\/$/,'')==='/widget')return;
+  const config=getWidgetConfig(),script=document.createElement('script');
+  script.src=config.src;script.dataset.bot=config.bot;script.defer=true;script.dataset.managedWidget='true';
+  document.body.append(script);
+}
+
+function WidgetSettings(){
+  const current=getWidgetConfig(),initialTag=widgetTag(current);
+  const save=e=>{e.preventDefault();const input=e.currentTarget.elements.widgetScript,status=e.currentTarget.querySelector('.widgetStatus');
+    try{const parsed=new DOMParser().parseFromString(input.value,'text/html').querySelector('script');const src=parsed?.getAttribute('src'),bot=parsed?.getAttribute('data-bot');
+      if(!src||!bot||!src.startsWith('https://'))throw new Error('Enter a script tag with an HTTPS src and data-bot value.');
+      localStorage.setItem(WIDGET_STORAGE_KEY,JSON.stringify({src,bot}));input.value=widgetTag({src,bot});status.textContent='Saved. The new widget is now active on the website.';status.className='widgetStatus success';
+    }catch(error){status.textContent=error.message;status.className='widgetStatus error'}
+  };
+  const reset=e=>{const form=e.currentTarget.form;localStorage.removeItem(WIDGET_STORAGE_KEY);form.elements.widgetScript.value=widgetTag(DEFAULT_WIDGET);form.querySelector('.widgetStatus').textContent='Default widget restored.';form.querySelector('.widgetStatus').className='widgetStatus success'};
+  return <main className="widgetPage"><section className="widgetPanel"><a className="widgetLogo" href="/"><span>YOMA</span> BANK <i>◆</i></a><div className="widgetBadge">Widget settings</div><h1>Chat widget</h1><p>Paste your chat provider's complete script tag below. Saving it updates the widget shown across the website on this browser.</p><form onSubmit={save}><label for="widgetScript">Widget script tag</label><textarea id="widgetScript" name="widgetScript" spellcheck="false">{initialTag}</textarea><small>Required attributes: <code>src</code> and <code>data-bot</code>. Only HTTPS scripts are accepted.</small><div className="widgetActions"><button type="submit">Save widget</button><button type="button" className="secondary" onClick={reset}>Restore default</button><a href="/">View website <ArrowRight/></a></div><p className="widgetStatus" role="status" aria-live="polite"></p></form></section></main>
+}
+
 function Header(){return <><div className="top"><span className="active">Personal Banking</span><span>Business Banking</span><span>Who We Are</span><div/><span>ATMs & Branches</span><span>Scam Awareness</span><span>News & Activities</span><span>Customer Care</span><b>MM</b><b className="lang">EN</b></div><header><a className="logo" href="#"><span>YOMA</span> BANK <i>◆</i></a><nav>{['Accounts','Cards','Loans','Digital Banking','Promotions','Other Services'].map(x=><a>{x}<ChevronDown/></a>)}</nav><button className="search"><Search/></button><button className="login">Login <ArrowRight/></button><button className="career">Careers</button><button className="men"><Menu/></button></header></>}
 
 const Tile=({className='',src,title,tag})=><article className={'service '+className} style={{backgroundImage:`linear-gradient(0deg,rgba(6,5,10,.68),transparent 62%),url('${src}')`}}>{tag&&<em>{tag}</em>}<h3>{title}</h3><ArrowRight/></article>;
@@ -27,4 +50,6 @@ function App(){const [faq,setFaq]=useState(-1); const faqs=['How can I apply onl
 function Title({first,second}){return <div className="title"><h2>{first}{second&&<><br/>{second}</>}</h2><i></i></div>}
 function Footer(){return <footer><div className="ask"><div><h2>Ask us anything</h2><p>We are here to provide helpful information and recommendations tailored to your needs.</p><span><MapPin/> Search Branches & ATM Locations　　<Phone/> (+95) 01 9662 9662</span></div><button>Contact us</button></div><div className="foot"><div><h4>Personal Banking</h4><a>Accounts & Deposits</a><a>Loans</a><a>Cards</a><a>Remittance</a><a>Digital Banking</a></div><div><h4>Business Banking</h4><a>Accounts</a><a>Loans</a><a>Trade Finance</a><a>Digital Banking</a><a>Get in Touch</a></div><div><h4>About Us</h4><a>About Yoma</a><a>Governance</a><a>Careers</a><a>News & Activities</a><h4>Follow Us</h4><p className="social"><Facebook/><Instagram/><Linkedin/><Youtube/></p></div><div><h4>Digital Login</h4><a>Business Portal</a><a>Payroll Portal</a><a>Supply Chain Financing</a></div><div><h4>Recent Blogs</h4><div className="blog">Smart ways to manage your money</div><div className="blog">Making banking easier every day</div></div></div><div className="copy"><span>Terms & Conditions　 Privacy Statement</span><span>© 2026 Copyright Yoma Bank. All rights reserved.</span><span>🇲🇲 MM　 🇬🇧 EN</span></div></footer>}
 
-createRoot(document.getElementById('root')).render(<App/>);
+const isWidgetPage=location.pathname.replace(/\/$/,'')==='/widget';
+createRoot(document.getElementById('root')).render(isWidgetPage?<WidgetSettings/>:<App/>);
+loadChatWidget();

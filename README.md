@@ -12,6 +12,10 @@ npm run dev
 
 Then open <http://localhost:4173>.
 
+The landing page loads the configured chat widget. Open <http://localhost:4173/widget>
+to paste and save a replacement widget script tag. The setting is stored in the
+browser and the default ApiToolz widget can be restored at any time.
+
 If you edit `src.jsx`, rebuild the committed browser bundle with:
 
 ```bash
