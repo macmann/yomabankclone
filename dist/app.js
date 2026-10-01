@@ -26,6 +26,72 @@ function Icon({ name, ...p }) { return React.createElement("svg", { ...p, viewBo
 const makeIcon = name => props => React.createElement(Icon, { name: name, ...props });
 const Menu = makeIcon('Menu'), Search = makeIcon('Search'), ChevronDown = makeIcon('ChevronDown'), ChevronLeft = makeIcon('ChevronLeft'), ChevronRight = makeIcon('ChevronRight'), ArrowRight = makeIcon('ArrowRight'), MapPin = makeIcon('MapPin'), Phone = makeIcon('Phone'), Mail = makeIcon('Mail'), Facebook = makeIcon('Facebook'), Instagram = makeIcon('Instagram'), Linkedin = makeIcon('Linkedin'), Youtube = makeIcon('Youtube'), Landmark = makeIcon('Landmark'), PiggyBank = makeIcon('PiggyBank'), CreditCard = makeIcon('CreditCard'), Smartphone = makeIcon('Smartphone'), BadgePercent = makeIcon('BadgePercent'), ShieldCheck = makeIcon('ShieldCheck'), Send = makeIcon('Send'), Clock3 = makeIcon('Clock3');
 const img = (id, w = 900) => `https://images.unsplash.com/${id}?auto=format&fit=crop&w=${w}&q=82`;
+const DEFAULT_WIDGET = { src: 'https://ai-staging.apitoolz.com/kb-chat.js', bot: 'cdea6f9a-d522-4f07-b54b-31706028e69f' };
+const WIDGET_STORAGE_KEY = 'yoma-bank-chat-widget';
+function widgetTag(config) { return `<script src="${config.src}" data-bot="${config.bot}" defer><\/script>`; }
+function getWidgetConfig() { try {
+    return { ...DEFAULT_WIDGET, ...JSON.parse(localStorage.getItem(WIDGET_STORAGE_KEY) || '{}') };
+}
+catch {
+    return DEFAULT_WIDGET;
+} }
+function loadChatWidget() {
+    if (location.pathname.replace(/\/$/, '') === '/widget')
+        return;
+    const config = getWidgetConfig(), script = document.createElement('script');
+    script.src = config.src;
+    script.dataset.bot = config.bot;
+    script.defer = true;
+    script.dataset.managedWidget = 'true';
+    document.body.append(script);
+}
+function WidgetSettings() {
+    const current = getWidgetConfig(), initialTag = widgetTag(current);
+    const save = e => {
+        e.preventDefault();
+        const input = e.currentTarget.elements.widgetScript, status = e.currentTarget.querySelector('.widgetStatus');
+        try {
+            const parsed = new DOMParser().parseFromString(input.value, 'text/html').querySelector('script');
+            const src = parsed?.getAttribute('src'), bot = parsed?.getAttribute('data-bot');
+            if (!src || !bot || !src.startsWith('https://'))
+                throw new Error('Enter a script tag with an HTTPS src and data-bot value.');
+            localStorage.setItem(WIDGET_STORAGE_KEY, JSON.stringify({ src, bot }));
+            input.value = widgetTag({ src, bot });
+            status.textContent = 'Saved. The new widget is now active on the website.';
+            status.className = 'widgetStatus success';
+        }
+        catch (error) {
+            status.textContent = error.message;
+            status.className = 'widgetStatus error';
+        }
+    };
+    const reset = e => { const form = e.currentTarget.form; localStorage.removeItem(WIDGET_STORAGE_KEY); form.elements.widgetScript.value = widgetTag(DEFAULT_WIDGET); form.querySelector('.widgetStatus').textContent = 'Default widget restored.'; form.querySelector('.widgetStatus').className = 'widgetStatus success'; };
+    return React.createElement("main", { className: "widgetPage" },
+        React.createElement("section", { className: "widgetPanel" },
+            React.createElement("a", { className: "widgetLogo", href: "/" },
+                React.createElement("span", null, "YOMA"),
+                " BANK ",
+                React.createElement("i", null, "\u25C6")),
+            React.createElement("div", { className: "widgetBadge" }, "Widget settings"),
+            React.createElement("h1", null, "Chat widget"),
+            React.createElement("p", null, "Paste your chat provider's complete script tag below. Saving it updates the widget shown across the website on this browser."),
+            React.createElement("form", { onSubmit: save },
+                React.createElement("label", { for: "widgetScript" }, "Widget script tag"),
+                React.createElement("textarea", { id: "widgetScript", name: "widgetScript", spellcheck: "false" }, initialTag),
+                React.createElement("small", null,
+                    "Required attributes: ",
+                    React.createElement("code", null, "src"),
+                    " and ",
+                    React.createElement("code", null, "data-bot"),
+                    ". Only HTTPS scripts are accepted."),
+                React.createElement("div", { className: "widgetActions" },
+                    React.createElement("button", { type: "submit" }, "Save widget"),
+                    React.createElement("button", { type: "button", className: "secondary", onClick: reset }, "Restore default"),
+                    React.createElement("a", { href: "/" },
+                        "View website ",
+                        React.createElement(ArrowRight, null))),
+                React.createElement("p", { className: "widgetStatus", role: "status", "aria-live": "polite" }))));
+}
 function Header() { return React.createElement(React.Fragment, null,
     React.createElement("div", { className: "top" },
         React.createElement("span", { className: "active" }, "Personal Banking"),
@@ -299,4 +365,6 @@ function Footer() { return React.createElement("footer", null,
         React.createElement("span", null, "Terms & Conditions\u3000 Privacy Statement"),
         React.createElement("span", null, "\u00A9 2026 Copyright Yoma Bank. All rights reserved."),
         React.createElement("span", null, "\uD83C\uDDF2\uD83C\uDDF2 MM\u3000 \uD83C\uDDEC\uD83C\uDDE7 EN"))); }
-createRoot(document.getElementById('root')).render(React.createElement(App, null));
+const isWidgetPage = location.pathname.replace(/\/$/, '') === '/widget';
+createRoot(document.getElementById('root')).render(isWidgetPage ? React.createElement(WidgetSettings, null) : React.createElement(App, null));
+loadChatWidget();
