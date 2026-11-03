@@ -13,8 +13,11 @@ npm run dev
 Then open <http://localhost:4173>.
 
 The landing page loads the configured chat widget. Open <http://localhost:4173/widget>
-to paste and save a replacement widget script tag. The setting is stored in the
-browser and the default AgentConnex widget can be restored at any time.
+to paste and save a replacement iframe or widget script tag. The setting is stored in the
+browser and the default AgentConnex hosted chat can be restored at any time.
+The default opens the supplied hosted chat URL in an iframe, with a new-tab link
+as an alternative. The retired ApiToolz default and previous AgentConnex loader
+settings automatically use this hosted chat; custom providers remain supported.
 
 If you edit `src.jsx`, rebuild the committed browser bundle with:
 
