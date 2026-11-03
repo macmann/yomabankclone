@@ -18,7 +18,7 @@ const React = { Fragment: ({ children }) => children, createElement(type, props,
 let hookValue = -1, renderApp;
 function useState(initial) { if (hookValue === -1)
     hookValue = initial; return [hookValue, v => { hookValue = typeof v === 'function' ? v(hookValue) : v; renderApp(); }]; }
-function createRoot(node) { return { render(component) { renderApp = () => { node.replaceChildren(App()); }; renderApp(); } }; }
+function createRoot(node) { return { render(component) { renderApp = () => { node.replaceChildren(App()); }; node.replaceChildren(component); } }; }
 const iconPaths = { Search: 'M21 21l-4.3-4.3M19 11a8 8 0 1 1-16 0 8 8 0 0 1 16 0', ChevronDown: 'm6 9 6 6 6-6', ChevronLeft: 'm15 18-6-6 6-6', ChevronRight: 'm9 18 6-6-6-6', ArrowRight: 'M5 12h14m-6-6 6 6-6 6', Menu: 'M4 6h16M4 12h16M4 18h16', MapPin: 'M20 10c0 5-8 12-8 12S4 15 4 10a8 8 0 1 1 16 0Zm-8 3a3 3 0 1 0 0-6 3 3 0 0 0 0 6', Phone: 'M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3.1 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2.1 4.2 2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1 1 .4 2 .7 2.8a2 2 0 0 1-.5 2.1L8 9.9a16 16 0 0 0 6 6l1.3-1.3a2 2 0 0 1 2.1-.5c.9.3 1.8.6 2.8.7a2 2 0 0 1 1.8 2.1Z' };
 function Icon({ name, ...p }) { return React.createElement("svg", { ...p, viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", "stroke-width": "2", "stroke-linecap": "round", "stroke-linejoin": "round" },
     React.createElement("path", { d: iconPaths[name] || 'M12 2v20M2 12h20M5 5l14 14M19 5 5 19' })); }
@@ -26,28 +26,123 @@ function Icon({ name, ...p }) { return React.createElement("svg", { ...p, viewBo
 const makeIcon = name => props => React.createElement(Icon, { name: name, ...props });
 const Menu = makeIcon('Menu'), Search = makeIcon('Search'), ChevronDown = makeIcon('ChevronDown'), ChevronLeft = makeIcon('ChevronLeft'), ChevronRight = makeIcon('ChevronRight'), ArrowRight = makeIcon('ArrowRight'), MapPin = makeIcon('MapPin'), Phone = makeIcon('Phone'), Mail = makeIcon('Mail'), Facebook = makeIcon('Facebook'), Instagram = makeIcon('Instagram'), Linkedin = makeIcon('Linkedin'), Youtube = makeIcon('Youtube'), Landmark = makeIcon('Landmark'), PiggyBank = makeIcon('PiggyBank'), CreditCard = makeIcon('CreditCard'), Smartphone = makeIcon('Smartphone'), BadgePercent = makeIcon('BadgePercent'), ShieldCheck = makeIcon('ShieldCheck'), Send = makeIcon('Send'), Clock3 = makeIcon('Clock3');
 const img = (id, w = 900) => `https://images.unsplash.com/${id}?auto=format&fit=crop&w=${w}&q=82`;
-const DEFAULT_WIDGET={src:'https://apiagentconnex.b-connect.site/widget.js',deployment:'ca45f4a9-3c74-4f7d-935c-f1374923664f',chatUrl:'https://agentconnex.b-connect.site/chat/ca45f4a9-3c74-4f7d-935c-f1374923664f'};
-const WIDGET_STORAGE_KEY='yoma-bank-chat-widget';
-function widgetTag(config){return config.bot?`<script src="${config.src}" data-bot="${config.bot}" defer><\/script>`:`<script async src="${config.src}" data-deployment="${config.deployment}" data-chat-url="${config.chatUrl}"><\/script>`}
-function getWidgetConfig(){try{return JSON.parse(localStorage.getItem(WIDGET_STORAGE_KEY)||'null')||DEFAULT_WIDGET}catch{return DEFAULT_WIDGET}}
-function loadChatWidget(){
-  if(location.pathname.replace(/\/$/,'')==='/widget')return;
-  const config=getWidgetConfig(),script=document.createElement('script');
-  script.src=config.src;
-  if(config.bot){script.dataset.bot=config.bot;script.defer=true}else{script.dataset.deployment=config.deployment;script.dataset.chatUrl=config.chatUrl;script.async=true}
-  script.dataset.managedWidget='true';
-  document.body.append(script);
+const DEFAULT_WIDGET = { mode: 'iframe', src: 'https://apiagentconnex.b-connect.site/widget.js', deployment: 'ca45f4a9-3c74-4f7d-935c-f1374923664f', chatUrl: 'https://agentconnex.b-connect.site/chat/ca45f4a9-3c74-4f7d-935c-f1374923664f' };
+const WIDGET_STORAGE_KEY = 'yoma-bank-chat-widget';
+function widgetTag(config) { return config.mode === 'iframe' ? `<iframe src="${config.chatUrl}" title="AI assistant" style="width:100%;height:720px;border:0;border-radius:12px" loading="lazy"></iframe>` : config.bot ? `<script src="${config.src}" data-bot="${config.bot}" defer><\/script>` : `<script async src="${config.src}" data-deployment="${config.deployment}" data-chat-url="${config.chatUrl}"><\/script>`; }
+function getWidgetConfig() {
+    try {
+        const saved = JSON.parse(localStorage.getItem(WIDGET_STORAGE_KEY) || 'null');
+        if (!saved)
+            return DEFAULT_WIDGET;
+        const retiredDefault = saved.src === 'https://ai-staging.apitoolz.com/kb-chat.js' && saved.bot === 'cdea6f9a-d522-4f07-b54b-31706028e69f';
+        const currentDefault = saved.src === DEFAULT_WIDGET.src && saved.deployment === DEFAULT_WIDGET.deployment && saved.chatUrl === DEFAULT_WIDGET.chatUrl;
+        if (retiredDefault || currentDefault)
+            return DEFAULT_WIDGET;
+        if (saved.mode === 'iframe' && typeof saved.chatUrl === 'string' && saved.chatUrl.startsWith('https://'))
+            return saved;
+        if (typeof saved.src === 'string' && saved.src.startsWith('https://') && (saved.bot || (saved.deployment && typeof saved.chatUrl === 'string' && saved.chatUrl.startsWith('https://'))))
+            return saved;
+    }
+    catch { }
+    return DEFAULT_WIDGET;
 }
-
+function loadHostedChat(config) {
+    const host = document.createElement('aside');
+    host.className = 'hostedChat';
+    host.setAttribute('aria-label', 'AI assistant');
+    const panel = document.createElement('section');
+    panel.id = 'hosted-chat-panel';
+    panel.className = 'hostedChatPanel';
+    panel.hidden = true;
+    panel.setAttribute('aria-label', 'Chat with our AI assistant');
+    const toolbar = document.createElement('div');
+    toolbar.className = 'hostedChatToolbar';
+    const title = document.createElement('strong');
+    title.textContent = 'AI assistant';
+    const close = document.createElement('button');
+    close.type = 'button';
+    close.textContent = 'Close';
+    close.setAttribute('aria-label', 'Close chat');
+    toolbar.append(title, close);
+    const frame = document.createElement('iframe');
+    frame.title = 'AI assistant';
+    frame.loading = 'lazy';
+    frame.className = 'hostedChatFrame';
+    const link = document.createElement('a');
+    link.href = config.chatUrl;
+    link.target = '_blank';
+    link.rel = 'noopener noreferrer';
+    link.textContent = 'Open chat in a new tab';
+    link.className = 'hostedChatLink';
+    panel.append(toolbar, frame, link);
+    const toggle = document.createElement('button');
+    toggle.type = 'button';
+    toggle.className = 'hostedChatToggle';
+    toggle.textContent = 'Chat with us';
+    toggle.setAttribute('aria-controls', panel.id);
+    toggle.setAttribute('aria-expanded', 'false');
+    const setOpen = open => { panel.hidden = !open; toggle.setAttribute('aria-expanded', String(open)); if (open) {
+        if (!frame.getAttribute('src'))
+            frame.src = config.chatUrl;
+        close.focus();
+    }
+    else
+        toggle.focus(); };
+    toggle.addEventListener('click', () => setOpen(panel.hidden));
+    close.addEventListener('click', () => setOpen(false));
+    host.addEventListener('keydown', event => { if (event.key === 'Escape' && !panel.hidden) {
+        event.preventDefault();
+        setOpen(false);
+    } });
+    host.append(panel, toggle);
+    document.body.append(host);
+}
+function loadChatWidget() {
+    if (location.pathname.replace(/\/$/, '') === '/widget')
+        return;
+    const config = getWidgetConfig();
+    if (config.mode === 'iframe') {
+        loadHostedChat(config);
+        return;
+    }
+    const script = document.createElement('script');
+    script.src = config.src;
+    if (config.bot) {
+        script.dataset.bot = config.bot;
+        script.defer = true;
+    }
+    else {
+        script.dataset.deployment = config.deployment;
+        script.dataset.chatUrl = config.chatUrl;
+        script.async = true;
+    }
+    script.dataset.managedWidget = 'true';
+    document.body.append(script);
+}
 function WidgetSettings() {
     const current = getWidgetConfig(), initialTag = widgetTag(current);
-  const save=e=>{e.preventDefault();const input=e.currentTarget.elements.widgetScript,status=e.currentTarget.querySelector('.widgetStatus');
-    try{const parsed=new DOMParser().parseFromString(input.value,'text/html').querySelector('script');const src=parsed?.getAttribute('src'),bot=parsed?.getAttribute('data-bot'),deployment=parsed?.getAttribute('data-deployment'),chatUrl=parsed?.getAttribute('data-chat-url');
-      if(!src||!src.startsWith('https://')||(!bot&&(!deployment||!chatUrl?.startsWith('https://'))))throw new Error('Enter an HTTPS script with data-deployment and an HTTPS data-chat-url, or data-bot.');
-      const config=bot?{src,bot}:{src,deployment,chatUrl};
-      localStorage.setItem(WIDGET_STORAGE_KEY,JSON.stringify(config));input.value=widgetTag(config);status.textContent='Saved. The new widget is now active on the website.';status.className='widgetStatus success';
-    }catch(error){status.textContent=error.message;status.className='widgetStatus error'}
-  };
+    const save = e => {
+        e.preventDefault();
+        const input = e.currentTarget.elements.widgetScript, status = e.currentTarget.querySelector('.widgetStatus');
+        try {
+            const parsed = new DOMParser().parseFromString(input.value, 'text/html').querySelector('script,iframe');
+            const src = parsed?.getAttribute('src'), bot = parsed?.getAttribute('data-bot'), deployment = parsed?.getAttribute('data-deployment'), chatUrl = parsed?.getAttribute('data-chat-url');
+            if (!src || !src.startsWith('https://'))
+                throw new Error('Enter a script or iframe with an HTTPS src.');
+            const isFrame = parsed.tagName === 'IFRAME';
+            if (!isFrame && !bot && (!deployment || !chatUrl?.startsWith('https://')))
+                throw new Error('Scripts need data-deployment and an HTTPS data-chat-url, or data-bot.');
+            const config = isFrame ? { mode: 'iframe', chatUrl: src } : bot ? { src, bot } : { src, deployment, chatUrl };
+            localStorage.setItem(WIDGET_STORAGE_KEY, JSON.stringify(config));
+            input.value = widgetTag(config);
+            status.textContent = 'Saved. The new widget is now active on the website.';
+            status.className = 'widgetStatus success';
+        }
+        catch (error) {
+            status.textContent = error.message;
+            status.className = 'widgetStatus error';
+        }
+    };
     const reset = e => { const form = e.currentTarget.form; localStorage.removeItem(WIDGET_STORAGE_KEY); form.elements.widgetScript.value = widgetTag(DEFAULT_WIDGET); form.querySelector('.widgetStatus').textContent = 'Default widget restored.'; form.querySelector('.widgetStatus').className = 'widgetStatus success'; };
     return React.createElement("main", { className: "widgetPage" },
         React.createElement("section", { className: "widgetPanel" },
@@ -57,12 +152,14 @@ function WidgetSettings() {
                 React.createElement("i", null, "\u25C6")),
             React.createElement("div", { className: "widgetBadge" }, "Widget settings"),
             React.createElement("h1", null, "Chat widget"),
-            React.createElement("p", null, "Paste your chat provider's complete script tag below. Saving it updates the widget shown across the website on this browser."),
+            React.createElement("p", null, "Paste your chat provider's complete iframe or script tag below. Saving it updates the widget shown across the website on this browser."),
             React.createElement("form", { onSubmit: save },
-                React.createElement("label", { for: "widgetScript" }, "Widget script tag"),
+                React.createElement("label", { for: "widgetScript" }, "Widget embed tag"),
                 React.createElement("textarea", { id: "widgetScript", name: "widgetScript", spellcheck: "false" }, initialTag),
                 React.createElement("small", null,
-                    "Required attributes: ",
+                    "Paste an iframe with ",
+                    React.createElement("code", null, "src"),
+                    ", or a script with ",
                     React.createElement("code", null, "src"),
                     ", ",
                     React.createElement("code", null, "data-deployment"),
@@ -70,7 +167,7 @@ function WidgetSettings() {
                     React.createElement("code", null, "data-chat-url"),
                     " (or ",
                     React.createElement("code", null, "data-bot"),
-                    " for legacy widgets). Only HTTPS URLs are accepted."),
+                    "). Only HTTPS URLs are accepted."),
                 React.createElement("div", { className: "widgetActions" },
                     React.createElement("button", { type: "submit" }, "Save widget"),
                     React.createElement("button", { type: "button", className: "secondary", onClick: reset }, "Restore default"),
