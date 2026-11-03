@@ -22,6 +22,36 @@ If you edit `src.jsx`, rebuild the committed browser bundle with:
 npm run build
 ```
 
+## Deploy to Coolify
+
+The included `Dockerfile` serves the committed static site with Nginx. No Node.js
+installation, build command, environment variables, or persistent volumes are needed.
+Rebuild `dist/app.js` before deploying any changes to `src.jsx`.
+
+1. In Coolify, create a new application from this Git repository and select the
+   branch containing the deployment files.
+2. Select **Dockerfile** as the build pack, use `/` as the base directory, and
+   `/Dockerfile` as the Dockerfile location.
+3. Set **Ports Exposes** to `80` and configure your domain. Let Coolify manage
+   HTTPS at its reverse proxy; the container serves HTTP internally.
+4. Deploy. If enabling Coolify's HTTP health check, use `GET /` on port `80`
+   with expected status `200`. The image also includes a Docker health check.
+
+The site supports `/widget/` for browser-local widget settings and falls back to
+the landing page for other application routes. Missing JavaScript and stylesheet
+assets return `404`. Only public site files are copied into the image.
+
+To validate the same deployment locally:
+
+```bash
+docker build -t yoma-bank-demo .
+docker run --rm -p 8080:80 yoma-bank-demo
+```
+
+Visit `http://localhost:8080` and `http://localhost:8080/widget/`.
+Widget settings are saved per browser and origin; configure them again if moving
+to a new domain. The default AgentConnex widget needs no server-side credentials.
+
 ## Deploy to Render
 
 The repository includes a Render Blueprint in `render.yaml` and can be deployed
