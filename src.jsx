@@ -8,27 +8,30 @@ const Menu=makeIcon('Menu'),Search=makeIcon('Search'),ChevronDown=makeIcon('Chev
 
 const img = (id, w=900) => `https://images.unsplash.com/${id}?auto=format&fit=crop&w=${w}&q=82`;
 
-const DEFAULT_WIDGET={src:'https://ai-staging.apitoolz.com/kb-chat.js',bot:'cdea6f9a-d522-4f07-b54b-31706028e69f'};
+const DEFAULT_WIDGET={src:'https://apiagentconnex.b-connect.site/widget.js',deployment:'ca45f4a9-3c74-4f7d-935c-f1374923664f',chatUrl:'https://agentconnex.b-connect.site/chat/ca45f4a9-3c74-4f7d-935c-f1374923664f'};
 const WIDGET_STORAGE_KEY='yoma-bank-chat-widget';
-function widgetTag(config){return `<script src="${config.src}" data-bot="${config.bot}" defer><\/script>`}
-function getWidgetConfig(){try{return {...DEFAULT_WIDGET,...JSON.parse(localStorage.getItem(WIDGET_STORAGE_KEY)||'{}')}}catch{return DEFAULT_WIDGET}}
+function widgetTag(config){return config.bot?`<script src="${config.src}" data-bot="${config.bot}" defer><\/script>`:`<script async src="${config.src}" data-deployment="${config.deployment}" data-chat-url="${config.chatUrl}"><\/script>`}
+function getWidgetConfig(){try{return JSON.parse(localStorage.getItem(WIDGET_STORAGE_KEY)||'null')||DEFAULT_WIDGET}catch{return DEFAULT_WIDGET}}
 function loadChatWidget(){
   if(location.pathname.replace(/\/$/,'')==='/widget')return;
   const config=getWidgetConfig(),script=document.createElement('script');
-  script.src=config.src;script.dataset.bot=config.bot;script.defer=true;script.dataset.managedWidget='true';
+  script.src=config.src;
+  if(config.bot){script.dataset.bot=config.bot;script.defer=true}else{script.dataset.deployment=config.deployment;script.dataset.chatUrl=config.chatUrl;script.async=true}
+  script.dataset.managedWidget='true';
   document.body.append(script);
 }
 
 function WidgetSettings(){
   const current=getWidgetConfig(),initialTag=widgetTag(current);
   const save=e=>{e.preventDefault();const input=e.currentTarget.elements.widgetScript,status=e.currentTarget.querySelector('.widgetStatus');
-    try{const parsed=new DOMParser().parseFromString(input.value,'text/html').querySelector('script');const src=parsed?.getAttribute('src'),bot=parsed?.getAttribute('data-bot');
-      if(!src||!bot||!src.startsWith('https://'))throw new Error('Enter a script tag with an HTTPS src and data-bot value.');
-      localStorage.setItem(WIDGET_STORAGE_KEY,JSON.stringify({src,bot}));input.value=widgetTag({src,bot});status.textContent='Saved. The new widget is now active on the website.';status.className='widgetStatus success';
+    try{const parsed=new DOMParser().parseFromString(input.value,'text/html').querySelector('script');const src=parsed?.getAttribute('src'),bot=parsed?.getAttribute('data-bot'),deployment=parsed?.getAttribute('data-deployment'),chatUrl=parsed?.getAttribute('data-chat-url');
+      if(!src||!src.startsWith('https://')||(!bot&&(!deployment||!chatUrl?.startsWith('https://'))))throw new Error('Enter an HTTPS script with data-deployment and an HTTPS data-chat-url, or data-bot.');
+      const config=bot?{src,bot}:{src,deployment,chatUrl};
+      localStorage.setItem(WIDGET_STORAGE_KEY,JSON.stringify(config));input.value=widgetTag(config);status.textContent='Saved. The new widget is now active on the website.';status.className='widgetStatus success';
     }catch(error){status.textContent=error.message;status.className='widgetStatus error'}
   };
   const reset=e=>{const form=e.currentTarget.form;localStorage.removeItem(WIDGET_STORAGE_KEY);form.elements.widgetScript.value=widgetTag(DEFAULT_WIDGET);form.querySelector('.widgetStatus').textContent='Default widget restored.';form.querySelector('.widgetStatus').className='widgetStatus success'};
-  return <main className="widgetPage"><section className="widgetPanel"><a className="widgetLogo" href="/"><span>YOMA</span> BANK <i>◆</i></a><div className="widgetBadge">Widget settings</div><h1>Chat widget</h1><p>Paste your chat provider's complete script tag below. Saving it updates the widget shown across the website on this browser.</p><form onSubmit={save}><label for="widgetScript">Widget script tag</label><textarea id="widgetScript" name="widgetScript" spellcheck="false">{initialTag}</textarea><small>Required attributes: <code>src</code> and <code>data-bot</code>. Only HTTPS scripts are accepted.</small><div className="widgetActions"><button type="submit">Save widget</button><button type="button" className="secondary" onClick={reset}>Restore default</button><a href="/">View website <ArrowRight/></a></div><p className="widgetStatus" role="status" aria-live="polite"></p></form></section></main>
+  return <main className="widgetPage"><section className="widgetPanel"><a className="widgetLogo" href="/"><span>YOMA</span> BANK <i>◆</i></a><div className="widgetBadge">Widget settings</div><h1>Chat widget</h1><p>Paste your chat provider's complete script tag below. Saving it updates the widget shown across the website on this browser.</p><form onSubmit={save}><label for="widgetScript">Widget script tag</label><textarea id="widgetScript" name="widgetScript" spellcheck="false">{initialTag}</textarea><small>Required attributes: <code>src</code>, <code>data-deployment</code>, and <code>data-chat-url</code> (or <code>data-bot</code> for legacy widgets). Only HTTPS URLs are accepted.</small><div className="widgetActions"><button type="submit">Save widget</button><button type="button" className="secondary" onClick={reset}>Restore default</button><a href="/">View website <ArrowRight/></a></div><p className="widgetStatus" role="status" aria-live="polite"></p></form></section></main>
 }
 
 function Header(){return <><div className="top"><span className="active">Personal Banking</span><span>Business Banking</span><span>Who We Are</span><div/><span>ATMs & Branches</span><span>Scam Awareness</span><span>News & Activities</span><span>Customer Care</span><b>MM</b><b className="lang">EN</b></div><header><a className="logo" href="#"><span>YOMA</span> BANK <i>◆</i></a><nav>{['Accounts','Cards','Loans','Digital Banking','Promotions','Other Services'].map(x=><a>{x}<ChevronDown/></a>)}</nav><button className="search"><Search/></button><button className="login">Login <ArrowRight/></button><button className="career">Careers</button><button className="men"><Menu/></button></header></>}
